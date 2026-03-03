@@ -67,6 +67,46 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
   cloudQueue.push(cloud);
 }
 
+void WorkModeCallback(livox_status status, uint32_t handle,LivoxLidarAsyncControlResponse *response, void *client_data) {
+  if (response == nullptr) {
+    return;
+  }
+  printf("WorkModeCallack, status:%u, handle:%u, ret_code:%u, error_key:%u",
+      status, handle, response->ret_code, response->error_key);
+}
+
+void LoggerStartCallback(livox_status status, uint32_t handle, LivoxLidarLoggerResponse* response, void* client_data) {
+  if (status != kLivoxLidarStatusSuccess) {
+    printf("Start logger failed, the status :%d\n", status);
+    LivoxLidarStartLogger(handle,  kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+    return;
+  }
+
+  if (response == nullptr) {
+    printf("Start logger failed, the response is nullptr.\n");
+    LivoxLidarStartLogger(handle,  kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+    return;
+  }
+
+  if (response->ret_code != 0) {
+    printf("Start logger failed, the response ret_Code:%d.\n", response->ret_code);
+    LivoxLidarStartLogger(handle,  kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+    return;
+  }
+
+  printf("The lidar[%u] start logger succ.\n", handle);
+}
+
+void LidarInfoChangeCallback(const uint32_t handle, const LivoxLidarInfo* info, void* client_data) {
+  if (info == nullptr) {
+    printf("lidar info change callback failed, the info is nullptr.\n");
+    return;
+  } 
+  printf("LidarInfoChangeCallback Lidar handle: %u SN: %s\n", handle, info->sn);
+  SetLivoxLidarWorkMode(handle, kLivoxLidarNormal, WorkModeCallback, nullptr);
+  LivoxLidarStartLogger(handle, kLivoxLidarRealTimeLog, LoggerStartCallback, nullptr);
+}
+
 int main(int argc, const char *argv[]){
 
     if(argc != 2){
@@ -93,6 +133,8 @@ int main(int argc, const char *argv[]){
 
     SetLivoxLidarImuDataCallback(ImuDataCallback, nullptr);
     
+    SetLivoxLidarInfoChangeCallback(LidarInfoChangeCallback, nullptr);
+
     pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer("Lidar Point Cloud Viewer"));
 
     viewer->setBackgroundColor(0, 0, 0);
@@ -104,7 +146,7 @@ int main(int argc, const char *argv[]){
 
     while(!viewer->wasStopped() && running){
 
-      pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud;
+      pcl::PointCloud<pcl::PointXYZ>::Ptr new_cloud (new pcl::PointCloud<pcl::PointXYZ>);
 
       if(cloudQueue.pop(new_cloud, false)){
 
