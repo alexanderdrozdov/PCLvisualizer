@@ -33,7 +33,7 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
     return;
   }
   cloudfile << "x y z";
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
   cloud->reserve(data->dot_num);
   
   if (data->data_type == kLivoxLidarCartesianCoordinateHighData) {
@@ -59,6 +59,8 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
         dst.z = src->z / 1000.0f;
 
         cloud->push_back(dst);
+
+        cloudfile << dst.x << ' ' << dst.y << ' ' << dst.z << std::endl;
     }
   }
 
