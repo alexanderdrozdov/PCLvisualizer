@@ -32,39 +32,52 @@ void PointCloudCallback(uint32_t handle, const uint8_t dev_type, LivoxLidarEther
   if (data == nullptr) {
     return;
   }
-  cloudfile << "x y z";
+
+  cloudfile << "x y z" <<std::endl;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
   cloud->reserve(data->dot_num);
   
   if (data->data_type == kLivoxLidarCartesianCoordinateHighData) {
+    
+    cloudfile << "32bit" <<std::endl;
     LivoxLidarCartesianHighRawPoint *src= (LivoxLidarCartesianHighRawPoint *)data->data;
     for(uint32_t i = 0; i < data->dot_num; i++){
-        pcl::PointXYZ dst;
-        dst.x = src->x / 1000.0f;
-        dst.y = src->y / 1000.0f;
-        dst.z = src->z / 1000.0f;
 
+        LivoxLidarCartesianHighRawPoint src_point = src[i];
+        pcl::PointXYZ dst;
+        /*dst.x = src->x;
+        dst.y = src->y;
+        dst.z = src->z;*/
+        dst.x = src_point.x / 1000.0f;
+        dst.y = src_point.y / 1000.0f;
+        dst.z = src_point.z / 1000.0f;
         cloud->push_back(dst);
 
         cloudfile << dst.x << ' ' << dst.y << ' ' << dst.z << std::endl;
     }
+    cloudQueue.push(cloud);
   }
 
   else if (data->data_type == kLivoxLidarCartesianCoordinateLowData) {
     LivoxLidarCartesianLowRawPoint *src= (LivoxLidarCartesianLowRawPoint *)data->data;
     for(uint32_t i = 0; i < data->dot_num; i++){
         pcl::PointXYZ dst;
-        dst.x = src->x / 1000.0f;
-        dst.y = src->y / 1000.0f;
-        dst.z = src->z / 1000.0f;
+        dst.x = src->x;
+        dst.y = src->y;
+        dst.z = src->z;
 
         cloud->push_back(dst);
 
         cloudfile << dst.x << ' ' << dst.y << ' ' << dst.z << std::endl;
     }
+    cloudQueue.push(cloud);
   }
 
-  cloudQueue.push(cloud);
+  else{
+    std::cout << "Data type is Sphericalcoords" << std::endl;
+    return;
+  }
+  
 }
 
 void WorkModeCallback(livox_status status, uint32_t handle,LivoxLidarAsyncControlResponse *response, void *client_data) {
